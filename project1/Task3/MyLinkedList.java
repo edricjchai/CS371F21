@@ -1,27 +1,17 @@
+package temp;
+
 import com.sun.istack.internal.NotNull;
-import com.sun.istack.internal.Nullable;
+import temp.MyLinkedList.Node;
+import temp.MyLinkedList.NodeIterator;
 
 import java.util.Iterator;
 
-/**
- *  Application of LinkedList for MemoryAllocation blocks
- *
- */
-
 class Block implements Comparable<Block>{
-    int offset,size;
+    public int offset,size;
 
     public Block(int offset, int size){
         this.offset = offset;
         this.size = size;
-    }
-
-    public int getOffset(){
-        return offset;
-    }
-
-    public int getSize(){
-        return size;
     }
 
     public boolean isAdjacent(@NotNull Block other){
@@ -39,45 +29,58 @@ class Block implements Comparable<Block>{
     }
 }
 
-public class MyLinkedList implements Iterable {
-    int address, size;
-    Node head, tail;
+
+class MyLinkedList implements Iterable{
+    Node head,tail;
 
     public MyLinkedList(){}
 
+    /**
+     * Add block to list
+     */
     public @NotNull Node add(@NotNull Block block){
-        Node next = new Node(block);
-        tail.next = next;
-        return tail = next;
+        Node node = new Node(block);
+        if(head == null){
+            head = node;
+            tail = node;
+        } else{
+            NodeIterator iterator = iterator();
+            Node current = null;
+            while(iterator.hasNext()){
+                current = iterator.next();
+                if(current == null)
+                    break;
+                if(current.block.offset < node.block.offset){
+                    node.block.offset = current.block.offset;
+                }
+                node.block.size += current.block.size;
+            }
+            if(block.offset + block.size < current.block.offset + current.block.size)
+                throw new IllegalStateException("Not enough space");
+        }
+        return node;
     }
 
-    //Node constructor
+    /**
+     * Node constructor for doubly linked-list implementation
+     */
     public static class Node{
-        Node prev, next;
+        Node previous,next;
         Block block;
-=
+
         public Node(@NotNull Block block){
             this.block = block;
         }
 
-        public @NotNull Node addAfter(int address, int size){
+        public @NotNull Node addAfter(@NotNull Block block){
             Node node = new Node(block);
-            node.prev = this;
+            node.previous = this;
             node.next = next;
-            next.prev = node;
+            next.previous = node;
             return next = node;
         }
 
-        public void linkLeft(@Nullable Node node){
-            this.prev = node;
-            if(node != null)
-                node.prev = this;
-        }
-        public void linkRight(@Nullable Node node) {
-            this.next = node;
-            if (node != null)
-                node.next = this;
-        }
+
         @Override public @NotNull String toString(){
             return block.toString();
         }
@@ -89,37 +92,19 @@ public class MyLinkedList implements Iterable {
             result += iterator.next() + ",";
         return result.length() > 0 ? result.substring(0,result.length() - 1) : result;
     }
-    // add method inserts a node into the current list
-    public @NotNull Node add(int address, int size){
-        Node next = new Node(address, size);
-        tail.next = next;
-        return tail = next;
-    }
 
-    //remove method removes current block reference off of list
-    public @NotNull void remove(){
+    /**
+     * Iterator implementation
+     */
+    @Override public @NotNull NodeIterator iterator(){
+        return new NodeIterator(){
+            Node current,next = head;
 
-    }
-
-    //searchBlock() finds a specific block size
-    public Node searchBlock(int findBlock){
-
-    }
-
-    //Iterator method implementations
-    //hasNext() checks if next in linkedlist is null
-    @Override public @NotNull Iterator iterator(){
-        return new Iterator() {
-            Node current, next;
-            boolean started;
-
-            @Override
-            public boolean hasNext() {
+            @Override public boolean hasNext(){
                 return next != null;
             }
 
-            @Override
-            public Object next() {
+            @Override public Node next(){
                 current = next;
                 if(hasNext())
                     next = current.next;
@@ -129,19 +114,174 @@ public class MyLinkedList implements Iterable {
             @Override public void remove(){
                 if(current == null)
                     throw new IllegalStateException("Next has not been called");
-                if(current.prev != null && current.next != null){
-                    current.next.prev = current.prev;
-                    current.prev.next = current.next;
-                } else if(current.prev == null){
+                if(current.previous != null && current.next != null){
+                    current.next.previous = current.previous;
+                    current.previous.next = current.next;
+                } else if(current.previous == null){
                     head = current.next;
-                    head.prev = null;
+                    head.previous = null;
                 } else{
-                    current.prev.next = null;
-                    tail = current.prev;
+                    current.previous.next = null;
+                    tail = current.previous;
                 }
             }
         };
     }
 
+    public interface NodeIterator extends Iterator{
+        @Override @NotNull Node next();
+    }
+}
 
+@FunctionalInterface interface AllocationStrategy{
+    int allocate(@NotNull MyLinkedList free, int size);
+}
+
+class MyMemoryAllocation extends MemoryAllocation{
+    private static final int ERROR_CODE = 0, ADDRESS_START = 1;
+    private static int nextFitPointer = 1;
+
+    private final MyLinkedList
+            free = new MyLinkedList(),
+            used = new MyLinkedList();
+    private final Algorithm algorithm;
+    private final int max;
+
+    public MyMemoryAllocation(int mem_size, @NotNull String algorithm){
+        super(mem_size,algorithm);
+        this.algorithm = Algorithm.find(algorithm);
+        max = mem_size;
+        free.add(new Block(ADDRESS_START,mem_size));
+    }
+
+    @Override public int alloc(int size){
+        NodeIterator usedIterator = used.iterator();
+        Node usedNode = usedIterator.next();
+
+        // remove from free memory
+        Block block = new Block(algorithm.allocate(free,size),size);
+
+        // add to used memory
+        while(!usedNode.block.isAdjacent(block) && usedIterator.hasNext())
+            usedNode = usedIterator.next();
+        if(!usedNode.block.isAdjacent(block))
+            return ERROR_CODE;
+        if(usedNode.block.offset + usedNode.block.size != block.offset)
+            usedNode.block.offset -= size;
+        usedNode.block.size += size;
+
+        return block.offset;
+    }
+
+    @Override public void free(int address){
+        NodeIterator iterator = used.iterator();
+        Node node = null;
+        while(iterator.hasNext() && (node = iterator.next()).block.offset != address);
+        if(node == null || node.block.offset != address)
+            throw new IllegalArgumentException("");
+        iterator.remove();
+        free.add(node.block);
+    }
+
+    @Override public int size(){
+        int result = 0;
+        for(NodeIterator iterator = used.iterator();iterator.hasNext();)
+            result += iterator.next().block.size;
+        return result;
+    }
+
+    @Override public int max_size(){
+        return max;
+    }
+
+    @Override public void print(){
+        System.out.printf("Used: %s%n",used);
+        System.out.printf("Free: %s%n",free);
+        System.out.printf("Algorithm: %s%n",algorithm.name);
+    }
+
+    /**
+     * Algorithm strategies to be used in allocation
+     */
+    private enum Algorithm{
+        BEST_FIT("BF",(free,size) -> {
+            NodeIterator iterator = free.iterator();
+            Node best = free.head;
+            while(iterator.hasNext()){
+                Node current = iterator.next();
+                if(current.block.size < best.block.size && current.block.size < size)
+                    best = current;
+            }
+            if(best.block.size < size)
+                return ERROR_CODE;
+            best.block.size -= size;
+            if(best.block.size == 0)
+                iterator.remove();
+            return best.block.offset += size;
+        }),
+        FIRST_FIT("FF",(free,size) -> {
+            NodeIterator iterator = free.iterator();
+            Node node = null;
+            while(iterator.hasNext() && (node = iterator.next()).block.size < size);
+            if(node == null || node.block.size < size)
+                return ERROR_CODE;
+            node.block.size -= size;
+            if(node.block.size == 0)
+                iterator.remove();
+            return node.block.offset += size;
+        }),
+        NEXT_FIT("NF",(free,size) -> {
+            NodeIterator iterator = free.iterator();
+            Node node = null;
+            while(iterator.hasNext()){
+                node = iterator.next();
+                if(node.block.offset + node.block.size >= nextFitPointer)
+                    break;
+            }
+            if(node == null)
+                return ERROR_CODE;
+            if(node.block.offset + node.block.size - nextFitPointer >= size){
+                int change = node.block.offset + node.block.size - nextFitPointer;
+                node.block.size -= change;
+                node = node.addAfter(new Block(nextFitPointer,size));
+                if(change > size)
+                    node.addAfter(new Block(node.block.offset + size,size - change));
+                nextFitPointer += size;
+                return node.block.offset;
+            } else{
+                Node saved = node;
+                free.tail.next = free.head;
+                while(iterator.hasNext() && (node = iterator.next()).block.size < size && node != saved);
+                if(node.block.size < size || node == saved){
+                    free.tail.next = null;
+                    return ERROR_CODE;
+                }
+                node.block.size -= size;
+                if(node.block.size == 0)
+                    iterator.remove();
+                free.tail.next = null;
+                return node.block.offset += size;
+            }
+        });
+
+        private final String name;
+        private final AllocationStrategy strategy;
+
+        public static @NotNull Algorithm find(@NotNull String name){
+            for(Algorithm algorithm : values()){
+                if(algorithm.name.equals(name))
+                    return algorithm;
+            }
+            throw new IllegalArgumentException("Invalid algorithm");
+        }
+
+        Algorithm(@NotNull String name, @NotNull AllocationStrategy strategy){
+            this.name = name;
+            this.strategy = strategy;
+        }
+
+        public int allocate(@NotNull MyLinkedList free, int size){
+            return strategy.allocate(free,size);
+        }
+    }
 }
