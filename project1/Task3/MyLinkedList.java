@@ -162,13 +162,16 @@ class MyMemoryAllocation extends MemoryAllocation{
         Block block = new Block(algorithm.allocate(free,size),size);
 
         // add to used memory
-        while(!usedNode.block.isAdjacent(block) && usedIterator.hasNext())
-            usedNode = usedIterator.next();
-        if(!usedNode.block.isAdjacent(block))
+        if(usedNode == null) {
             return ERROR_CODE;
-        if(usedNode.block.offset + usedNode.block.size != block.offset)
-            usedNode.block.offset -= size;
-        usedNode.block.size += size;
+        }
+            while (!usedNode.block.isAdjacent(block) && usedIterator.hasNext())
+                usedNode = usedIterator.next();
+            if (!usedNode.block.isAdjacent(block))
+                return ERROR_CODE;
+            if (usedNode.block.offset + usedNode.block.size != block.offset)
+                usedNode.block.offset -= size;
+            usedNode.block.size += size;
 
         return block.offset;
     }
@@ -177,7 +180,7 @@ class MyMemoryAllocation extends MemoryAllocation{
         NodeIterator iterator = used.iterator();
         Node node = null;
         while(iterator.hasNext() && (node = iterator.next()).block.offset != address);
-        if(node == null || node.block.offset != address)
+        if (node == null || node.block.offset != address)
             throw new IllegalArgumentException("");
         iterator.remove();
         free.add(node.block);
