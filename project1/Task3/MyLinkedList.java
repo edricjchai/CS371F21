@@ -1,9 +1,9 @@
-package temp;
+package Task3;
 
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
-import temp.MyLinkedList.Node;
-import temp.MyLinkedList.NodeIterator;
+import Task3.MyLinkedList.Node;
+import Task3.MyLinkedList.NodeIterator;
 
 import java.util.Iterator;
 import java.util.function.Predicate;
@@ -301,15 +301,7 @@ class MyMemoryAllocation extends MemoryAllocation{
             node.block.offset += size;
             return result;
         }),
-        NEXT_FIT("NF",(free,size) -> {
-
-
-
-
-
-
-
-
+        NEXT_FIT("NF",(free,size) -> { //Finish Scam fit
             NodeIterator iterator = free.iterator();
             Node node = null;
             while(iterator.hasNext()){
@@ -326,33 +318,43 @@ class MyMemoryAllocation extends MemoryAllocation{
                     node.addAfter(new Block(nextFitPointer + size, space - size));
                 if(node.block.size == 0)
                     node.remove();
-                nextFitPointer += size;
+                if(node.next == null)
+                    nextFitPointer = 1;
+                else
+                    nextFitPointer = node.next.block.offset;
                 return node.block.offset;
             } else{
-                free.tail.next = free.head;
-                free.head.previous = free.tail;
-                boolean looped = false;
-                node = iterator.next();
-                do{
+                Node stopNode = node;
+                if(free.tail.next == node.next) { //puts pointer back to head
+                    iterator = free.iterator(); //reset iterator
+                    node = iterator.next();
+                }
+                while(node.block.size < size && (node.block.offset <= nextFitPointer) || stopNode != node){
+                    if(free.tail.next == node.next) {
+                        iterator = free.iterator();
+                    }
                     if(node.block.size >= size)
                         break;
-                    if(node == free.tail)
-                        looped = true;
                     node = iterator.next();
-                } while(node.block.size < size && (node.block.offset < nextFitPointer || !looped));
-                if(node.block.size < size){
-                    free.tail.next = null;
-                    free.head.previous = null;
-                    return ERROR_CODE;
                 }
+                if(node.block.size < size)
+                    return ERROR_CODE;
+                // returns the result of offset and sets nextFitPointer
                 int result = node.block.offset;
                 node.block.offset += size;
                 node.block.size -= size;
                 if(node.block.size == 0){
-                    nextFitPointer = node.next.block.offset;
+                    if(node.next == null)
+                        nextFitPointer = 1;
+                    else
+                        nextFitPointer = node.next.block.offset;
                     node.remove();
-                } else
-                    nextFitPointer = node.block.offset;
+                } else {
+                    if(node.next == null)
+                        nextFitPointer = 1;
+                    else
+                        nextFitPointer = node.next.block.offset;
+                }
                 free.tail.next = null;
                 free.head.previous = null;
                 return result;
