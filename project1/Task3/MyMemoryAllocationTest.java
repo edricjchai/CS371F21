@@ -1,3 +1,5 @@
+package Task3;
+
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
@@ -13,129 +15,26 @@ public class MyMemoryAllocationTest {
 	
 	@Test
 	public void testConstructor() {
-		MyMemoryAllocation mal= new MyMemoryAllocation(500, "FF"); //Block of 500, first fit
+		MyMemoryAllocation mal= new MyMemoryAllocation(500, "FF");
 		assert(mal.size() == 499);
 		assert(mal.max_size() == 499);
 	}
 	private MyMemoryAllocation prepHoles(String algo) {
-		MyMemoryAllocation mal= new MyMemoryAllocation(14, algo); //Block of 14, inserted algorithm testcase
-		//14 bytes available block [(0),(1,13)], Used blocks list empty []
-		mal.alloc(1); //Memory allocated 1
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1)] / [(0)(2-13)]
-			bf: [(0),(1)] / [(0)(2-13)]
-			nf: [(0),(1)] / [(0)(2-13)]
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			forAllAlgorithms(cause they're the same for alloc): [(0),(1)] / [(0)(2-13)]
-			*/
-		mal.alloc(3); //Memory allocated 3
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(2,5)] / [(0)(6-13)]
-			bf: [(0),(1),(2,5)] / [(0)(6-13)]
-			nf: [(0),(1),(2,5)] / [(0)(6-13)]
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			forAllAlgorithms(cause they're the same for alloc): [(0),(1,5)] / [(0)(6-13)]
-			*/
-		mal.alloc(2); //Memory Allocated 2
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(2,5),(6,7)] / [(0)(8-13)]
-			bf: [(0),(1),(2,5),(6,7)] / [(0)(8-13)]
-			nf: [(0),(1),(2,5),(6,7)] / [(0)(8-13)]
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			forAllAlgorithms(cause they're the same for alloc): [(0),(1,7)] / [(0)(8-13)]
-			*/
-		mal.alloc(2); //Memory Allocated 2
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(2,5),(6,7),(8,9)] / [(0)(10-13)]
-			bf: [(0),(1),(2,5),(6,7),(8,9)] / [(0)(10-13)]
-			nf: [(0),(1),(2,5),(6,7),(8,9)] / [(0)(10-13)]
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			forAllAlgorithms(cause they're the same for alloc): [(0),(1,9)] / [(0)(10-13)]
-			*/
-		mal.alloc(1); //Memory Allocated 1
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(2,5),(6,7),(8,9),(10)] / [(0)(11-13)]
-			bf: [(0),(1),(2,5),(6,7),(8,9),(10)] / [(0)(11-13)]
-			nf: [(0),(1),(2,5),(6,7),(8,9),(10)] / [(0)(11-13)]
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			forAllAlgorithms(cause they're the same for alloc): [(0),(1,10)] / [(0)(11-13)]
-			*/
-		mal.alloc(1); //Memory Allocated 1
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(2,5),(6,7),(8,9),(10),(11)] / [(0)(12-13)]
-			bf: [(0),(1),(2,5),(6,7),(8,9),(10),(11)] / [(0)(12-13)]
-			nf: [(0),(1),(2,5),(6,7),(8,9),(10),(11)] / [(0)(12-13)]
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			forAllAlgorithms(cause they're the same for alloc): [(0),(1,10)] / [(0)(11-13)]
-			*/
-		mal.alloc(1); //Memory Allocated 1
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(2,5),(6,7),(8),(8,9),(10),(11),(12)] / [(0)(13)]
-			bf: [(0),(1),(2,5),(6,7),(8),(8,9),(10),(11),(12)] / [(0)(13)]
-			nf: [(0),(1),(2,5),(6,7),(8),(8,9),(10),(11),(12)] / [(0)(13)]
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			forAllAlgorithms(cause they're the same for alloc): [(0),(1,12)] / [(0)(13)]
-			*/
-		mal.alloc(2); //Memory Allocated 2
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(2,5),(6,7),(8),(8,9),(10),(11),(12)] ref 0, failed / [(0)(13)]
-			bf: [(0),(1),(2,5),(6,7),(8),(8,9),(10),(11),(12)] ref 0, failed / [(0)(13)]
-			nf: [(0),(1),(2,5),(6,7),(8),(8,9),(10),(11),(12)] ref 0, failed / [(0)(13)]
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			forAllAlgorithms(cause they're the same for alloc): [(0),(1,10)] / [(0)(11-13)] ref 0, failed
-			*/
-		mal.free(2); //Memory Freed 2
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(4,5),(6,7),(8,9),(10),(11),(12)] / [(0),(2,3),(13)]
-			bf: [(0),(1),(2,5),(8),(8,9),(10),(11),(12)] / [(0),(6,7),(13)]
-			nf: [(0),(1),*(4,5),(6,7),(8,9),(10),(11),(12)] / [(0),(2,3),(13)] * = marker for NF
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			ff: [(0),(3,12)] / [(0),(1,2),(13)]
-			bf: [(0),(3,12)] / [(0),(1,2),(13)]
-			nf: [(0),*(3,12)] / [(0),(1,2),(13)] * = marker for NF
-			*/
-		mal.free(7); //Memory Freed 7
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(4,5),(6,7),(8,9),(10),(11),(12)] / [(0),(2,3),(13)] ref 0, failed
-			bf: [(0),(1),(2,5),(8,9),(10),(11),(12)] / [(0),(6,7),(13)] ref 0, failed
-			nf: [(0),(1),*(4,5),(6,7),(8,9),(10),(11),(12)] / [(0),(2,3),(13)] * = marker for NF, ref 0, failed
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			ff: [(0),(10,12)] / [(0),(1,9),(13)] ref 0, failed
-			bf: [(0),(10,12)] / [(0),(1,9),(13)] ref 0, failed
-			nf: [(0),*(10,12)] / [(0),(1,9),(13)] * = marker for NF, ref 0, failed
-			*/
-		mal.free(10); //Memory Freed 10
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(4,5),(6,7),(8,9),(10),(11),(12)] / [(0),(2,3),(13)] ref 0, failed
-			bf: [(0),(1),(2,5),(8,9),(10),(11),(12)] / [(0),(6,7),(13)] ref 0, failed
-			nf: [(0),(1),*(4,5),(6,7),(8,9),(10),(11),(12)] / [(0),(2,3),(13)] * = marker for NF, ref 0, failed
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			ff: [(0),(10,12)] / [(0),(1,9),(13)] ref 0, failed
-			bf: [(0),(10,12)] / [(0),(1,9),(13)] ref 0, failed
-			nf: [(0),*(10,12)] / [(0),(1,9),(13)] * = marker for NF, ref 0, failed
-			*/
-		mal.free(12); //Memory Freed 12
-		/*	USED BLOCKS	/ AVAILABLE BLOCKS
-			ff: [(0),(1),(4,5),(6,7),(8,9),(10),(11),(12)] / [(0),(2,3),(13)]
-			bf: [(0),(1),(2,5),(8,9),(10),(11),(12)] / [(0),(6,7),(13)]
-			nf: [(0),(1),*(4,5),(6,7),(8,9),(10),(11),(12)] / [(0),(2,3),(13)] * = marker for NF
-			ASSUMING ALLOCATION/FREE MERGES blocks
-			ff: [(0),(10,12)] / [(0),(1,9),(13)] ref 0, failed
-			bf: [(0),(10,12)] / [(0),(1,9),(13)] ref 0, failed
-			nf: [(0),*(10,12)] / [(0),(1,9),(13)] * = marker for NF, ref 0, failed
-			*/
-		assert(mal.size() == 8); //false for both
-		/* Assuming Alloc did not merge blocks
-			ff, bf, nf: mal.size() = 3
-			Assuming Alloc merged blocks
-			ff, bf, nf: mal.size() = 10
-		 */
-		assert(mal.max_size() == 3); //false for both
-		/* Assuming Alloc did not merge blocks
-			ff, bf, nf: mal.max_size() = 2
-			Assuming Alloc merged blocks
-			ff, bf, nf: mal.max_size() = 9
-		 */
+		MyMemoryAllocation mal= new MyMemoryAllocation(14, algo);
+		mal.alloc(1);
+		mal.alloc(3);
+		mal.alloc(2);
+		mal.alloc(2);
+		mal.alloc(1);
+		mal.alloc(1);
+		mal.alloc(1);
+		mal.alloc(2);
+		mal.free(2);
+		mal.free(7);
+		mal.free(10);
+		mal.free(12);
+		assert(mal.size() == 8);
+		assert(mal.max_size() == 3);
 		return mal;
 	}
 	@Test
