@@ -1,10 +1,12 @@
 package temp;
 
 import com.sun.istack.internal.NotNull;
+import com.sun.istack.internal.Nullable;
 import temp.MyLinkedList.Node;
 import temp.MyLinkedList.NodeIterator;
 
 import java.util.Iterator;
+import java.util.function.Predicate;
 
 class Block implements Comparable<Block>{
     public int offset,size;
@@ -36,35 +38,37 @@ class MyLinkedList implements Iterable{
     public MyLinkedList(){}
 
     /**
-     * Add block to list
+     * Add block to tail of list
      */
     public @NotNull Node add(@NotNull Block block){
-        Node node = new Node(block);
         if(head == null){
+            Node node = new Node(block);
             head = node;
             tail = node;
-        } else{
-            NodeIterator iterator = iterator();
-            Node current = null;
-            while(iterator.hasNext()){
-                current = iterator.next();
-                if(current == null)
-                    break;
-                if(current.block.offset < node.block.offset){
-                    node.block.offset = current.block.offset;
-                }
-                node.block.size += current.block.size;
-            }
-            if(block.offset + block.size < current.block.offset + current.block.size)
-                throw new IllegalStateException("Not enough space");
+            return node;
         }
-        return node;
+        return tail.addAfter(block);
+    }
+
+    /**
+     * Merge blocks together
+     */
+    public void merge(){
+        for(NodeIterator iterator = iterator();iterator.hasNext();){
+            Node node = iterator.next();
+            if(node != head){
+                if(node.previous.block.isAdjacent(node.block)){
+                    node.previous.block.size += node.block.size;
+                    iterator.remove();
+                }
+            }
+        }
     }
 
     /**
      * Node constructor for doubly linked-list implementation
      */
-    public static class Node{
+    public class Node{
         Node previous,next;
         Block block;
 
@@ -72,14 +76,46 @@ class MyLinkedList implements Iterable{
             this.block = block;
         }
 
+        public @NotNull Node addBefore(@NotNull Block block){
+            Node node = new Node(block);
+            node.previous = previous;
+            node.next = this;
+            if(previous == null)
+                head = node;
+            else
+                previous.next = node;
+            return previous = node;
+        }
+
         public @NotNull Node addAfter(@NotNull Block block){
             Node node = new Node(block);
             node.previous = this;
             node.next = next;
-            next.previous = node;
+            if(next == null)
+                tail = node;
+            else
+                next.previous = node;
             return next = node;
         }
 
+        public void remove(){
+            // node is inner node
+            if(previous != null && next != null){
+                next.previous = previous;
+                previous.next = next;
+                return;
+            }
+            if(this == head){
+                head = next;
+                if(head != null)
+                    head.previous = null;
+            }
+            if(this == tail){
+                tail = previous;
+                if(tail != null)
+                    tail.next = null;
+            }
+        }
 
         @Override public @NotNull String toString(){
             return block.toString();
@@ -98,32 +134,22 @@ class MyLinkedList implements Iterable{
      */
     @Override public @NotNull NodeIterator iterator(){
         return new NodeIterator(){
-            Node current,next = head;
+            Node current;
 
             @Override public boolean hasNext(){
-                return next != null;
+                return current == null ? head != null : current.next != null;
             }
 
             @Override public Node next(){
-                current = next;
                 if(hasNext())
-                    next = current.next;
+                    current = current == null ? head : current.next;
                 return current;
             }
 
             @Override public void remove(){
                 if(current == null)
                     throw new IllegalStateException("Next has not been called");
-                if(current.previous != null && current.next != null){
-                    current.next.previous = current.previous;
-                    current.previous.next = current.next;
-                } else if(current.previous == null){
-                    head = current.next;
-                    head.previous = null;
-                } else{
-                    current.previous.next = null;
-                    tail = current.previous;
-                }
+                current.remove();
             }
         };
     }
@@ -139,7 +165,7 @@ class MyLinkedList implements Iterable{
 
 class MyMemoryAllocation extends MemoryAllocation{
     private static final int ERROR_CODE = 0, ADDRESS_START = 1;
-    private static int nextFitPointer = 1;
+    private static int nextFitPointer;
 
     private final MyLinkedList
             free = new MyLinkedList(),
@@ -150,10 +176,14 @@ class MyMemoryAllocation extends MemoryAllocation{
     public MyMemoryAllocation(int mem_size, @NotNull String algorithm){
         super(mem_size,algorithm);
         this.algorithm = Algorithm.find(algorithm);
-        max = mem_size;
-        free.add(new Block(ADDRESS_START,mem_size));
+        nextFitPointer = 1;
+        max = mem_size - 1;
+        free.add(new Block(ADDRESS_START,max));
     }
 
+    /**
+     *  Allocates memory(int) to usedList in order of Strategy(FirstFit,BestFit,NextFit)
+     */
     @Override public int alloc(int size){
         NodeIterator usedIterator = used.iterator();
         Node usedNode = usedIterator.next();
@@ -162,38 +192,72 @@ class MyMemoryAllocation extends MemoryAllocation{
         Block block = new Block(algorithm.allocate(free,size),size);
 
         // add to used memory
-        if(usedNode == null) {
+        if(usedNode == null)
+            return used.add(block).block.offset;
+        while (!usedNode.block.isAdjacent(block) && usedIterator.hasNext())
+            usedNode = usedIterator.next();
+        if (!usedNode.block.isAdjacent(block))
             return ERROR_CODE;
+        if (usedNode.block.offset + usedNode.block.size != block.offset)
+            return usedNode.addBefore(block).block.offset;
+        return usedNode.addAfter(block).block.offset;
+    }
+
+    private @Nullable Node skipWhile(@NotNull NodeIterator iterator, @NotNull Predicate<Node> predicate){
+        while(iterator.hasNext()){
+            Node current = iterator.next();
+            if(!predicate.test(current))
+                return current;
         }
-            while (!usedNode.block.isAdjacent(block) && usedIterator.hasNext())
-                usedNode = usedIterator.next();
-            if (!usedNode.block.isAdjacent(block))
-                return ERROR_CODE;
-            if (usedNode.block.offset + usedNode.block.size != block.offset)
-                usedNode.block.offset -= size;
-            usedNode.block.size += size;
-
-        return block.offset;
+        return null;
     }
 
+    /**
+     * free method, unassigning memory from the usedList and making it available(freeList)
+     */
     @Override public void free(int address){
+        // remove memory from used list
         NodeIterator iterator = used.iterator();
-        Node node = null;
-        while(iterator.hasNext() && (node = iterator.next()).block.offset != address);
-        if (node == null || node.block.offset != address)
-            throw new IllegalArgumentException("");
+        Node node = skipWhile(iterator, n -> n.block.offset != address);
+        if (node == null || node.block.offset != address) {
+            System.err.println("Address is not the start of an allocated block");
+            return;
+        }
         iterator.remove();
-        free.add(node.block);
+
+        // add memory to free list
+        if(free.head == null)
+            free.add(node.block);
+        else {
+            Node stopNode = skipWhile(
+                    free.iterator(),
+                    n -> n.block.offset < node.block.offset
+            );
+            if(stopNode == null)
+                free.tail.addAfter(node.block);
+            else
+                stopNode.addBefore(node.block);
+            free.merge();
+        }
     }
 
+    /**
+     * returns the total size of available memory
+     */
     @Override public int size(){
         int result = 0;
-        for(NodeIterator iterator = used.iterator();iterator.hasNext();)
+        for(NodeIterator iterator = free.iterator();iterator.hasNext();)
             result += iterator.next().block.size;
         return result;
     }
 
+    /**
+     * returns the largest size of available memory
+     */
     @Override public int max_size(){
+        int max = 0;
+        for(NodeIterator iterator = free.iterator();iterator.hasNext();)
+            max = Math.max(iterator.next().block.size,max);
         return max;
     }
 
@@ -212,15 +276,17 @@ class MyMemoryAllocation extends MemoryAllocation{
             Node best = free.head;
             while(iterator.hasNext()){
                 Node current = iterator.next();
-                if(current.block.size < best.block.size && current.block.size < size)
+                if(current.block.size < best.block.size && current.block.size >= size)
                     best = current;
             }
             if(best.block.size < size)
                 return ERROR_CODE;
             best.block.size -= size;
             if(best.block.size == 0)
-                iterator.remove();
-            return best.block.offset += size;
+                best.remove();
+            int result = best.block.offset;
+            best.block.offset += size;
+            return result;
         }),
         FIRST_FIT("FF",(free,size) -> {
             NodeIterator iterator = free.iterator();
@@ -230,10 +296,20 @@ class MyMemoryAllocation extends MemoryAllocation{
                 return ERROR_CODE;
             node.block.size -= size;
             if(node.block.size == 0)
-                iterator.remove();
-            return node.block.offset += size;
+                node.remove();
+            int result = node.block.offset;
+            node.block.offset += size;
+            return result;
         }),
         NEXT_FIT("NF",(free,size) -> {
+
+
+
+
+
+
+
+
             NodeIterator iterator = free.iterator();
             Node node = null;
             while(iterator.hasNext()){
@@ -243,27 +319,43 @@ class MyMemoryAllocation extends MemoryAllocation{
             }
             if(node == null)
                 return ERROR_CODE;
-            if(node.block.offset + node.block.size - nextFitPointer >= size){
-                int change = node.block.offset + node.block.size - nextFitPointer;
-                node.block.size -= change;
-                node = node.addAfter(new Block(nextFitPointer,size));
-                if(change > size)
-                    node.addAfter(new Block(node.block.offset + size,size - change));
+            int space = node.block.offset + node.block.size - nextFitPointer;
+            if(space >= size && space <= node.block.size){
+                node.block.size -= space;
+                if(space > size)
+                    node.addAfter(new Block(nextFitPointer + size, space - size));
+                if(node.block.size == 0)
+                    node.remove();
                 nextFitPointer += size;
                 return node.block.offset;
             } else{
-                Node saved = node;
                 free.tail.next = free.head;
-                while(iterator.hasNext() && (node = iterator.next()).block.size < size && node != saved);
-                if(node.block.size < size || node == saved){
+                free.head.previous = free.tail;
+                boolean looped = false;
+                node = iterator.next();
+                do{
+                    if(node.block.size >= size)
+                        break;
+                    if(node == free.tail)
+                        looped = true;
+                    node = iterator.next();
+                } while(node.block.size < size && (node.block.offset < nextFitPointer || !looped));
+                if(node.block.size < size){
                     free.tail.next = null;
+                    free.head.previous = null;
                     return ERROR_CODE;
                 }
+                int result = node.block.offset;
+                node.block.offset += size;
                 node.block.size -= size;
-                if(node.block.size == 0)
-                    iterator.remove();
+                if(node.block.size == 0){
+                    nextFitPointer = node.next.block.offset;
+                    node.remove();
+                } else
+                    nextFitPointer = node.block.offset;
                 free.tail.next = null;
-                return node.block.offset += size;
+                free.head.previous = null;
+                return result;
             }
         });
 
