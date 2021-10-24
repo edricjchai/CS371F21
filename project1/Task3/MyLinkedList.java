@@ -1,10 +1,5 @@
-package Task3;
-
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
-import Task3.MyLinkedList.Node;
-import Task3.MyLinkedList.NodeIterator;
-
 import java.util.Iterator;
 import java.util.function.Predicate;
 
@@ -185,8 +180,8 @@ class MyMemoryAllocation extends MemoryAllocation{
      *  Allocates memory(int) to usedList in order of Strategy(FirstFit,BestFit,NextFit)
      */
     @Override public int alloc(int size){
-        NodeIterator usedIterator = used.iterator();
-        Node usedNode = usedIterator.next();
+        MyLinkedList.NodeIterator usedIterator = used.iterator();
+        MyLinkedList.Node usedNode = usedIterator.next();
 
         // remove from free memory
         Block block = new Block(algorithm.allocate(free,size),size);
@@ -203,9 +198,10 @@ class MyMemoryAllocation extends MemoryAllocation{
         return usedNode.addAfter(block).block.offset;
     }
 
-    private @Nullable Node skipWhile(@NotNull NodeIterator iterator, @NotNull Predicate<Node> predicate){
+    private @Nullable
+    MyLinkedList.Node skipWhile(@NotNull MyLinkedList.NodeIterator iterator, @NotNull Predicate<MyLinkedList.Node> predicate){
         while(iterator.hasNext()){
-            Node current = iterator.next();
+            MyLinkedList.Node current = iterator.next();
             if(!predicate.test(current))
                 return current;
         }
@@ -217,8 +213,8 @@ class MyMemoryAllocation extends MemoryAllocation{
      */
     @Override public void free(int address){
         // remove memory from used list
-        NodeIterator iterator = used.iterator();
-        Node node = skipWhile(iterator, n -> n.block.offset != address);
+        MyLinkedList.NodeIterator iterator = used.iterator();
+        MyLinkedList.Node node = skipWhile(iterator, n -> n.block.offset != address);
         if (node == null || node.block.offset != address) {
             System.err.println("Address is not the start of an allocated block");
             return;
@@ -229,7 +225,7 @@ class MyMemoryAllocation extends MemoryAllocation{
         if(free.head == null)
             free.add(node.block);
         else {
-            Node stopNode = skipWhile(
+            MyLinkedList.Node stopNode = skipWhile(
                     free.iterator(),
                     n -> n.block.offset < node.block.offset
             );
@@ -246,7 +242,7 @@ class MyMemoryAllocation extends MemoryAllocation{
      */
     @Override public int size(){
         int result = 0;
-        for(NodeIterator iterator = free.iterator();iterator.hasNext();)
+        for(MyLinkedList.NodeIterator iterator = free.iterator(); iterator.hasNext();)
             result += iterator.next().block.size;
         return result;
     }
@@ -256,7 +252,7 @@ class MyMemoryAllocation extends MemoryAllocation{
      */
     @Override public int max_size(){
         int max = 0;
-        for(NodeIterator iterator = free.iterator();iterator.hasNext();)
+        for(MyLinkedList.NodeIterator iterator = free.iterator(); iterator.hasNext();)
             max = Math.max(iterator.next().block.size,max);
         return max;
     }
@@ -272,10 +268,10 @@ class MyMemoryAllocation extends MemoryAllocation{
      */
     private enum Algorithm{
         BEST_FIT("BF",(free,size) -> {
-            NodeIterator iterator = free.iterator();
-            Node best = free.head;
+            MyLinkedList.NodeIterator iterator = free.iterator();
+            MyLinkedList.Node best = free.head;
             while(iterator.hasNext()){
-                Node current = iterator.next();
+                MyLinkedList.Node current = iterator.next();
                 if(current.block.size < best.block.size && current.block.size >= size)
                     best = current;
             }
@@ -289,8 +285,8 @@ class MyMemoryAllocation extends MemoryAllocation{
             return result;
         }),
         FIRST_FIT("FF",(free,size) -> {
-            NodeIterator iterator = free.iterator();
-            Node node = null;
+            MyLinkedList.NodeIterator iterator = free.iterator();
+            MyLinkedList.Node node = null;
             while(iterator.hasNext() && (node = iterator.next()).block.size < size);
             if(node == null || node.block.size < size)
                 return ERROR_CODE;
@@ -302,8 +298,8 @@ class MyMemoryAllocation extends MemoryAllocation{
             return result;
         }),
         NEXT_FIT("NF",(free,size) -> { //Finish Scam fit
-            NodeIterator iterator = free.iterator();
-            Node node = null;
+            MyLinkedList.NodeIterator iterator = free.iterator();
+            MyLinkedList.Node node = null;
             while(iterator.hasNext()){
                 node = iterator.next();
                 if(node.block.offset + node.block.size >= nextFitPointer)
@@ -324,7 +320,7 @@ class MyMemoryAllocation extends MemoryAllocation{
                     nextFitPointer = node.next.block.offset;
                 return node.block.offset;
             } else{
-                Node stopNode = node;
+                MyLinkedList.Node stopNode = node;
                 if(free.tail.next == node.next) { //puts pointer back to head
                     iterator = free.iterator(); //reset iterator
                     node = iterator.next();
