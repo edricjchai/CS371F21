@@ -125,7 +125,7 @@ public class VirtMemoryTest {
         assertEquals(2048, m.getPhyMemory().writeCountDisk());
         //Code review q6: why are there 2048 disk writes?
         /**
-         * he first for-loop write the data into the virtual memory with the max address space 16 bits. Every 32 writes are half page and cause one write-back.
+         * The first for-loop write the data into the virtual memory with the max address space 16 bits. Every 32 writes are half page and cause one write-back.
          * One page is 2*32 = 64 bytes. There are 1024 pages which is 2 * 1024 = 2048 disk writes.
          */
         assertEquals(2048, m.getPhyMemory().readCountDisk());
@@ -159,7 +159,7 @@ public class VirtMemoryTest {
          * It is different from test5 because it start from the TEST_SIZE-1 and stop when i >= 0, and test5 is start from 0 and stop when i < TEST_SIDE.
          * The read method on for-loop is walking backward.
          * 16K/64B = 256, the physical memory is holding 256 pages. Because the read method is going backward and it already read this 256 pages.
-         * The other pages need to read is 1024-245=768 pages, the loop need to reload this 768 pages.
+         * The other pages need to read is 1024-256=768 pages, the read counter need to reload this 768 pages.
          * The total number of read is 1024 + 768 = 1792 reads.
          */
     }
