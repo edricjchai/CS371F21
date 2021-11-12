@@ -32,7 +32,12 @@ public class VirtMemoryTest {
         MatcherAssert.assertThat(0, not(errContent.toString().length()));
         //Code review q1: what is the max legit address for m.write()??
         /**
+<<<<<<< HEAD
          * The biggest address that m is able to write to is 0xFFFFFF, being that the we have seemingly 24 bytes of address space
+=======
+         * The biggest address that m is able to write to is 0xFFFFFF, the virtual memory is 2^16 bytes which means the address space is 16 bits.
+         * This 16-bit divided into the ratio of 10:6, the 10 bits (2^10) is 1024 VPNs and the 6 bits (2^6) is 64 bytes are the page sizes.
+>>>>>>> f59e240a0db9db43570f15c407d4535b356fc645
          */
         m.shutdown();
     }
@@ -91,8 +96,13 @@ public class VirtMemoryTest {
         assertEquals(32, writeCount);
         //Code review q4: why are there 32 disk writes?
         /**
+<<<<<<< HEAD
          * The size of one page is 64 writes which is enough to cause one write-back,
          * this page size is being looped through the test 32 times causing 32 writebacks
+=======
+         * 64 bytes are the page sizes. Each times to access the write method it times the 64 means each time to access the write method
+         * take 1 disk writes and the for loop access the write method 32 times means there is 32 disk writes.
+>>>>>>> f59e240a0db9db43570f15c407d4535b356fc645
          */
 
         assertEquals(32, readCount);
@@ -124,13 +134,24 @@ public class VirtMemoryTest {
         assertEquals(2048, m.getPhyMemory().writeCountDisk());
         //Code review q6: why are there 2048 disk writes?
         /**
+<<<<<<< HEAD
          * The test loops the write method with the max address space 64k however due to the function it changed the byte size to be smaller/different
          * therefore changing the [amount of page] being written making less write-backs.
+=======
+         * The first for-loop write the data into the virtual memory with the max address space 16 bits. Every 32 writes are half page and cause one write-back.
+         * One page is 2*32 = 64 bytes. There are 1024 pages which is 2 * 1024 = 2048 disk writes.
+>>>>>>> f59e240a0db9db43570f15c407d4535b356fc645
          */
         assertEquals(2048, m.getPhyMemory().readCountDisk());
         //Code review q7: why are there 2048 disk reads?
         /**
+<<<<<<< HEAD
          * The readcount reads the amount written on the address space which is 2048
+=======
+         * The read method is to load the page from the disk to physical memory.
+         * The second for-loop is comparing the the used space and free space in the disk, to check is there a place to import new data into the disk instead of override the used pages.
+         * The write loop take 2048 disk writes to store the data and the read loop also need the same amount of disk to check the memory space.
+>>>>>>> f59e240a0db9db43570f15c407d4535b356fc645
          */
     }
     @Test
@@ -148,13 +169,25 @@ public class VirtMemoryTest {
         assertEquals(2048, m.getPhyMemory().writeCountDisk());
         //Code review q8: why are there 2048 disk writes?
         /**
+<<<<<<< HEAD
          * Same as question 6
+=======
+         * 32 writes is half page and cause one write back to the disk immediately. 1024 page times two is 2048 disk writes.
+>>>>>>> f59e240a0db9db43570f15c407d4535b356fc645
          */
         assertEquals(1792, m.getPhyMemory().readCountDisk());
         //Code review q9: why are there 1792 disk writes? Why is it different from test5?
         /**
+<<<<<<< HEAD
          * the read counter has been instantiated through the loop just -1 less the max address space causing a differentiation of
          * the variables between write and read
+=======
+         * It is different from test5 because it start from the TEST_SIZE-1 and stop when i >= 0, and test5 is start from 0 and stop when i < TEST_SIDE.
+         * The read method on for-loop is walking backward.
+         * 16K/64B = 256, the physical memory is holding 256 pages. Because the read method is going backward and it already read this 256 pages.
+         * The other pages need to read is 1024-256=768 pages, the read counter need to reload this 768 pages.
+         * The total number of read is 1024 + 768 = 1792 reads.
+>>>>>>> f59e240a0db9db43570f15c407d4535b356fc645
          */
     }
     @Test
