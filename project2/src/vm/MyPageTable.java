@@ -96,7 +96,7 @@ public class MyPageTable{
         }
         throw new PageFaultException();
     }
-    public boolean getDirty(int vpn){
+    /*public boolean getDirty(int vpn){
         int index = Math.abs(hash(vpn) % INITIAL_SIZE);
         if(table[index].vpn == vpn){
             return table[index].dirty;
@@ -105,8 +105,8 @@ public class MyPageTable{
         }
         return false;
     }
-
-    public void rehash(){
+*/
+    /*public void rehash(){
         INITIAL_SIZE = INITIAL_SIZE * 2;
         counter = 0;
         PageTableEntry[] temp = table;
@@ -123,7 +123,7 @@ public class MyPageTable{
 
         }
     }
-
+*/
 
 
 }
