@@ -3,76 +3,106 @@ package vm;
 import storage.PhyMemory;
 
 public class VirtMemory extends Memory {
+
     MyPageTable pageTable = new MyPageTable();
-    PhyMemory pM = new PhyMemory();
+    Policy policy = new Policy();
     private int writeCounter = 0;
+    private int address;
+    private int vpn;
+    private int pfn;
+    private int offset;
+
 
     public VirtMemory() {
         super(new PhyMemory());
     }
 
-    public VirtMemory(PhyMemory ram) {
-        super(ram);
-    }
-
-    public void AddressTranslation(){
-
+    private void setPaging(int addr){
+        this.address = addr;
+        this.vpn = addr/64;
+        this.offset = addr%64;
+        //this.pfn = policy.writeCounter();
     }
 
     @Override
-    public void write(int addr, byte value){
-        if(addr >= 0xFFFFFF || addr < 0){
+    public void write(int addr, byte value) {
+        if(addr >= 65536 || addr < 0){
             System.err.println();
             return;
         }
-        int writeOverflow = value + writeCounter;
-        if(writeOverflow >= 32){
-            pM.load(addr / 64 , addr);
+        setPaging(addr);
+        //checks if addr is writing back more than half a page and has written at first index
+        if( (addr >= 32 && ram.read(0) == -1)) {
             sync_to_disk();
             writeCounter = 0;
         }
-        pM.write(addr, value);
-        writeCounter++;
+        //Single-writes
+        //pfn = policy.getPFN();
+        try{
+            int phyAddr = addrTranslation(addr);
+            if(phyAddr < 0 || phyAddr >= 2048)
+                throw new NoPFNException();
+            pageTable.checkUsed(vpn);
+            pfn = policy.writeCounter();
+            vpn = address/64;
+            pageTable.insert(vpn, pfn);
+            //pfn = pageTable.vpnToPfn(vpn);
+            writeCounter++;
+            ram.write(phyAddr, value);
+        }catch(PageFaultException | NoPFNException e){
+            e.printStackTrace();
+            System.err.println();
+        }
+        //Detect write overflow
+        if(writeCounter >= 32 || addr >= 64){
+            sync_to_disk();
+            writeCounter = 0;
+
+        }
     }
 
 
-    private boolean load(int addr){
-
-
-        return true;
+    @Override
+    public byte read(int addr)  {
+        int phyAddr = addrTranslation(address);
+        ram.load(pfn, phyAddr);
+        return ram.read(phyAddr);
     }
 
     @Override
-    public byte read(int addr) {
-        int vpn = getVPN(addr);
-        int offset = getOffset(addr);
-        return 0;
+    public void sync_to_disk() {
+        if(address >= 65536 || address < 0){
+            System.err.println();
+            return;
+        }
+        int pfnCounter=0;
+        for(int i = 0; i < 256; i++){
+            if(pageTable.getDirty(i)){
+                pageTable.eraseDirty(i);
+                pfnCounter++;
+            }
+        }
+        if(pfnCounter > 0){
+            ram.store(writeCounter, 0);
+            ram.load(writeCounter, 0);
+        }
+
+
     }
 
-    @Override
-    protected void sync_to_disk() {
 
-    }
-    private int getVPN(int addr){
-        return addr/64;
-    }
-    private int getOffset(int addr){
-        return addr%64;
-    }
-
-    private byte addrTranslation(int addr) throws PageFaultException {
-        // 1. extract VPN from VA
-        int vpn = getVPN(addr);
-        int offset = getOffset(addr);
-
-        // 2. calculate addr of PTE
-        int pfn = pageTable.getByVPN(vpn);
-
-        // 3. Get the memory address by concatenating the pfn + offset
-        String memAddrString = String.valueOf(pfn) + String.valueOf(offset);
-        int memAddr = Integer.parseInt(memAddrString);
-
-        // 4. read PTE from memory
-        return pM.read(memAddr);
+    private int addrTranslation(int addr) {
+        try {
+            setPaging(addr);
+            if(pfn < 0){
+                throw new PageFaultException();
+            }
+            int memAddr = (pfn << 6) + offset;
+            return memAddr;
+        }
+        catch(PageFaultException e){
+            e.printStackTrace();
+            return -1;
+        }
     }
 }

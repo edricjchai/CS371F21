@@ -1,18 +1,19 @@
 package vm;
 
 public class MyPageTable{
-    private static int INITIAL_SIZE = 1024;
+    private static final int INITIAL_SIZE = 256;
     PageTableEntry[] table;
-    private Policy tablePolicy;
+    int hashTable[] = new int[INITIAL_SIZE];
     private int counter = 0;
+    private int j = -1;
 
     MyPageTable(){
         table = new PageTableEntry[INITIAL_SIZE];
         for(int i = 0; i < INITIAL_SIZE; i++)
-            table[i] = null;
+            table[i] = new PageTableEntry(-1, i);
     }
 
-    private static class PageTableEntry {
+    public static class PageTableEntry {
         int vpn;
         int pfn;
         boolean dirty;
@@ -24,106 +25,55 @@ public class MyPageTable{
             dirty = false;
             next = null;
         }
-        public boolean hasNext() {
-            return next != null;
+        public int getVpn(){
+            return this.vpn;
         }
 
-        public String toString(){
-            return (String)("VPN: " + vpn + " PFN: " + pfn + " Dirty: " + dirty);
+        public void setVpn(int vpn) {
+            this.vpn = vpn;
         }
-    }
 
-    public boolean contains(int addr) throws PageFaultException {
-        return getByVPN(addr/64) == addr;
-    }
-
-    public void removeFirst(){
-        table[0] = null;
-    }
-    public void addLast(int vpn, int pfn){
-        for(int i = 0; i <= table.length; i++){
-            if(table[i] == null){
-                table[i] = new PageTableEntry(vpn, pfn);
-                break;
-            }
+        public void setDirty(boolean dirty) {
+            this.dirty = dirty;
         }
     }
 
-    public void removePage(PageTableEntry pte){
-        int idx = pte.vpn / 64;
-        if(table[idx] != null){
-            PageTableEntry[] temp = new PageTableEntry[table.length-1];
-            for(int i = 0, j = 0; i < table.length; i++){
-                if(!table[i].equals(pte))
-                    temp[j++] = temp[i];
-            }
-            table = temp;
+    public void insert(int vpn, int pfn){
+        table[pfn].setVpn(vpn);
+        table[pfn].setDirty(true);
+        counter++;
+        if(counter > INITIAL_SIZE){
+            counter = 0;
         }
     }
 
-    public void putEntry(int vpn, int pfn){
-        int index = vpn / 64;
-
-        PageTableEntry entry = table[index];
-        if(table[index] == null){
-            entry = new PageTableEntry(vpn, pfn);
-        }else{
-            while(entry.hasNext() && entry.vpn != vpn){
-                entry = entry.next;
-            }
-            if(entry.hasNext())
-                entry.next = new PageTableEntry(vpn, pfn);
-            else{
-                PageTableEntry temp = entry.next;
-                entry.next = new PageTableEntry(vpn, pfn);
-                entry.next.next = temp;
-            }
-        }
-        table[index] = entry;
+    /*https://stackoverflow.com/questions/682438/hash-function-providing-unique-uint-from-an-integer-coordinate-pair*/
+    private int hashCode(int a) {
+        a = (a ^ 61) ^ (a >> 16);
+        a = a + (a << 3);
+        a = a ^ (a >> 4);
+        a = a * 0x27d4eb2d;
+        a = a ^ (a >> 15);
+        return a;
     }
 
-    public int getByVPN(int vpn) throws PageFaultException {
-        for(PageTableEntry i : table){
-            if(vpn == i.vpn){
-                return i.pfn;
-            }
-        }
-        throw new PageFaultException();
+    public void eraseDirty(int pfn){
+        table[pfn].dirty = false;
     }
-    public int getByPFN(int pfn) throws PageFaultException {
-        for(PageTableEntry i: table){
-            if(pfn == i.pfn) return i.vpn;
-        }
-        throw new PageFaultException();
-    }
-    /*public boolean getDirty(int vpn){
-        int index = Math.abs(hash(vpn) % INITIAL_SIZE);
-        if(table[index].vpn == vpn){
-            return table[index].dirty;
-        }else{
 
-        }
-        return false;
-    }
-*/
-    /*public void rehash(){
-        INITIAL_SIZE = INITIAL_SIZE * 2;
-        counter = 0;
-        PageTableEntry[] temp = table;
-        table = new PageTableEntry[INITIAL_SIZE];
-
-        for(int i = 0; i < INITIAL_SIZE; i++){
-            if(temp[i] != null){
-                continue;
-            }
-            PageTableEntry add = temp[i];
-            int index = Math.abs(add.vpn.hashCode()%INITIAL_SIZE);
-            table[index] = temp[i];
-            counter++;
-
+    public void checkUsed(int vpn) throws PageFaultException {
+        int index = Math.abs(hashCode(vpn)) % INITIAL_SIZE;
+        if(index >= INITIAL_SIZE || index == -1 || table[index].getVpn() != -1 && table[index].dirty) {
+            throw new PageFaultException();
         }
     }
-*/
+
+    public boolean getDirty(int pfn){
+        if(pfn >= INITIAL_SIZE){
+            return false;
+        }
+        return table[pfn].dirty;
+    }
 
 
 }
