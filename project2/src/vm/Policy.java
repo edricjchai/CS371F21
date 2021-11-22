@@ -1,20 +1,18 @@
 package vm;
-import storage.PhyMemory;
 
 public class Policy {
-    MyPageTable table;
+    private int counter;
 
-    public Policy(MyPageTable table){
-        this.table = table;
+    public Policy(){
+        counter = 0;
     }
 
-    //Only call when table is full
-    public void FIFO(int vpn, int pfn){
-        table.removeFirst();
-        table.addLast(vpn, pfn);
+    public int writeCounter(){
+        counter++;
+        if(counter > 256){
+            counter = 0;
+        }
+        return counter;
     }
 
-    //TODO: public int countFrame(){}
-
-    //TODO: public findAllDirty(){}
 }

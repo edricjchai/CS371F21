@@ -16,7 +16,7 @@ public abstract class Memory {
     /*
      * writes specified value into memory at specified position - addr
      */
-    abstract public void write(int addr, byte value);
+    abstract public void write(int addr, byte value) ;
 
     /*
      * returns value that was stored at address addr
