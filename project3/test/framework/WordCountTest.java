@@ -44,6 +44,7 @@ public class WordCountTest {
         assertEquals(0, ret);
         //Code review questions:
         //q1: How many partitions does this test set up?
+        //There are 2 partitions
         //q2: Based on the Partitioner function in MapperReducerClientAPI, what should be stored in partition 0
         //and what should be stored in partition 1? (hint: you can write a little main() test func in MapperReducerClientAPI)
         //q3: What are the key value pairs stored in the concurrent KV stores by reducers when the reduce() is called for the first time? Please use the format of 
