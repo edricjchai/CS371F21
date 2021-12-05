@@ -44,13 +44,21 @@ public class WordCountTest {
         assertEquals(0, ret);
         //Code review questions:
         //q1: How many partitions does this test set up?
-        // The number of partitions is the same number of reducers that are called, therefore here the number of partitions
+        //ans1: The number of partitions is the same number of reducers that are called, therefore here the number of partitions
         // is expected to be 2.
         //q2: Based on the Partitioner function in MapperReducerClientAPI, what should be stored in partition 0
         //and what should be stored in partition 1? (hint: you can write a little main() test func in MapperReducerClientAPI)
-        //q3: What are the key value pairs stored in the concurrent KV stores by reducers when the reduce() is called for the first time? Please use the format of 
+        //ans2: Based on the partitioner function it gives us a hash based on the wordcount, meaning it might give us an address
+        // to the specific location in the partitions. Then using that we would put in a called string value inside the partitions.
+        // Partition 0: (foo, {1}), (bar, {1}), (woof, {1}), (foo, {1})
+        // Partition 1: (foo, {1}), (road, {1}), (fox, {1}), (box, {1}), (road, {1})
+        // q3: What are the key value pairs stored in the concurrent KV stores by reducers when the reduce() is called for the first time? Please use the format of
         //(key,{val_1,val_2,..val_n}).
+        // ans3: Calling reduce() for the first time will instantiate a KV store and combine the partition elements together.
+        // KV Store: (foo, {1, 1, 1}), (bar, {1}), (woof, {1}), (road, {1, 1}), (fox, {1}), (box, {1})
         //q4: For key "foo", how many times does MRGetNext get invoked?
+        // ans4: MRGetNext likely checks the frequency(value) of the words(keys) through the combined ConcurrentKVStore after
+        // the partitions have called reduce() and aligned them in the KVStore.
     }
     @Test
     public  void test2_large_single() {
