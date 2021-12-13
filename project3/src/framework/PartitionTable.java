@@ -70,7 +70,7 @@ public class PartitionTable implements Iterable{
         front = block;
     }
 
-    public void insert(Object key, Object value){
+    public void insert(Object key, 1){
         Word block = new Word(key, value);
         Word temp = front;
         if(front == null){

@@ -17,10 +17,10 @@
 
         private class kv{
             private Object key;
-            private int value;
+            private Object value;
             private kv next;
 
-            public kv(Object key, int value){
+            public kv(Object key, Object value){
                 this.key = key;
                 this.value = value;
                 this.next = null;
@@ -34,8 +34,7 @@
         }
 
         public void insert(Object key){
-            kv kvPair = new kv(key, 1);
-            pair.add(kvPair);
+            pair.add(new kv(key, "1"));
         }
 
         public int getPartitionNumber() {
