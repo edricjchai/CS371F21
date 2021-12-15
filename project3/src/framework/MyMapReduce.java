@@ -20,7 +20,6 @@ public class MyMapReduce extends MapReduce {
 	}
 
 	public Object MRGetNext(Object key, int partition_number) {
-
 		if(table.iterator().hasNext()){
 			return table.iterator().next();
 		}
@@ -58,6 +57,7 @@ public class MyMapReduce extends MapReduce {
 			}
 			split = nextSplit;
 			nextSplit += nextSplit;
+		}
 		//throw new UnsupportedOperationException();
 	}
 }
