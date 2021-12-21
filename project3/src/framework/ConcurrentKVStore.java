@@ -33,13 +33,11 @@
         }
 
         public void insert(Object key){
-            if(pair == null)
+            if(pair == null || !pair.contains(key))
                 pair.add(new kv(key, "1"));
             else{
-                if(pair.contains(key)){
-                    kv temp = new kv(key, pair.get(pair.indexOf(key)).value.add("1"));
-                    pair.set(pair.indexOf(key),temp);
-                }
+                kv temp = new kv(key, pair.get(pair.indexOf(key)).value.add("1"));
+                pair.set(pair.indexOf(key),temp);
             }
         }
 

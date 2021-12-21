@@ -1,11 +1,18 @@
 package framework;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Scanner;
+import java.util.stream.Collectors;
 
 public class MyMapReduce extends MapReduce {
 	private ConcurrentKVStore kvStore;
 	private ArrayList<PartitionTableTemp> table; // = new ArrayList<>();
 	private MapperReducerClientAPI mapperReducerObj;
+	private ArrayList<String> text = new ArrayList<>();
 
 	@Override
 	public void MREmit(Object key, Object value)
@@ -28,34 +35,36 @@ public class MyMapReduce extends MapReduce {
 	protected void MRRunHelper(String inputFileName,
 							   MapperReducerClientAPI mapperReducerObj,
 							   int num_mappers,
-							   int num_reducers)
-	{
+							   int num_reducers) {
 		//TODO: your code here. Delete UnsupportedOperationException after your implementation is done.
 		int partitioner = (int)mapperReducerObj.Partitioner(inputFileName, num_mappers);
 
+		readFile(inputFileName);
+
 		table = new ArrayList<>();
 		int split = 0;
-		int nextSplit = inputFileName.length()/num_mappers; // size of partition table
-		int remainder = inputFileName.length()%num_mappers;
+		int nextSplit = text.size()/num_mappers; // size of partition table
+		int remainder = text.size()%num_mappers;
 		for(int i = 0; i < num_mappers; i++) {
 
 			table.add(new PartitionTableTemp());
 			//Splits the file based on the number of mappers then maps them as inputs
-			String fileSplit = inputFileName.substring(split, nextSplit);
 			//Put the splitted file inputs into the partition table
-			int count = 0;
-			//mapperReducerObj.Map(fileSplit);
-			while(count < nextSplit){
-				table.get(i).deposit(fileSplit);
-				count++;
-				if(remainder > 1){
-					table.get(i).deposit(inputFileName.substring(nextSplit, nextSplit+1));
-					nextSplit++;
-					remainder--;
-				}
-			}
+			List<String> partition = text.subList(split,nextSplit);
+			int j = 0;
+			for(; j < partition.size(); j++)
+				table.get(i).deposit(partition.get(j));
+
 			split = nextSplit;
 			nextSplit += nextSplit;
+
+			while(remainder > 0){
+				table.get(i).deposit(partition.get(j-1));
+				nextSplit++;
+				j++;
+				remainder--;
+			}
+
 		}
 
 		kvStore = new ConcurrentKVStore(num_reducers);
@@ -63,9 +72,6 @@ public class MyMapReduce extends MapReduce {
 		//throw new UnsupportedOperationException();
 	}
 
-	/**
-	 *
-	 */
 	public void reducer(){
 		LinkedList<Object> temp = new LinkedList<Object>();
 
@@ -76,6 +82,17 @@ public class MyMapReduce extends MapReduce {
 				kvStore.insert(temp);
 				temp.iterator().next();
 			}
+		}
+	}
+
+	private void readFile(String inputFileName) {
+		try {
+			Scanner scan = new Scanner(new File(inputFileName));
+			while(scan.hasNext())
+				text.add(scan.next());
+		}
+		catch (FileNotFoundException e) {
+			e.printStackTrace();
 		}
 	}
 
