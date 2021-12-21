@@ -46,7 +46,7 @@ public class PartitionTableTemp implements Iterable{
      * Places a word element into the circularQueue based on where the pointer(count) is
      * @param word
      */
-    public void deposit(String word){
+    public void deposit(Object word){
         Node item = new Node(word, "1");
         if(circularQueue == null){
             circularQueue = item;
