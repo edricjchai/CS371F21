@@ -28,7 +28,7 @@ public class MyMapReduce extends MapReduce {
 	}
 
 	public Object MRGetNext(Object key, int partition_number) {
-		//TODO: your code here. Delete UnsupportedOperationException after your implementation is done.
+    //TODO: your code here. Delete UnsupportedOperationException after your implementation is done.
 		return table.get(partition_number).iterator().next();
 	}
 	@Override
@@ -66,8 +66,8 @@ public class MyMapReduce extends MapReduce {
 			}
 
 		}
-
-		kvStore = new ConcurrentKVStore(num_reducers);
+    
+    kvStore = new ConcurrentKVStore(num_reducers);
 		reducer();
 		//throw new UnsupportedOperationException();
 	}
@@ -84,7 +84,6 @@ public class MyMapReduce extends MapReduce {
 			}
 		}
 	}
-
 	private void readFile(String inputFileName) {
 		try {
 			Scanner scan = new Scanner(new File(inputFileName));
