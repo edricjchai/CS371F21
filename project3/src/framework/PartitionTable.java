@@ -10,7 +10,7 @@ public class PartitionTable implements Iterable{
 	// (2) if reducer_i wants to fetch a KV pair it can
 	// only fetches from partition_i, but mapper_i can drop messages
 	// into different partitions.
-    private Word front;
+    private Word front, tail;
 
     @Override
     public Iterator iterator() {
@@ -18,6 +18,7 @@ public class PartitionTable implements Iterable{
             Word current;
             @Override
             public boolean hasNext() {
+                if(front == null && current == null) return false;
                 return current == null ? front.next != null : current.next != null;
             }
 
@@ -70,20 +71,17 @@ public class PartitionTable implements Iterable{
         front = block;
     }
 
-    public void insert(Object key, 1){
-        Word block = new Word(key, value);
-        Word temp = front;
+    public void insert(Object key){
+        Word block = new Word(key, "1");
         if(front == null){
             front = block;
+            tail = block;
         }else{
-            while(temp != null){
-                temp = temp.next;
-            }
-            temp.next = block;
+            tail.next = block;
         }
     }
 
-    public void remove(Object key){
+    public void removeKey(Object key){
         Word temp = front;
         while(temp != null){
             if(front.key == key && front.next != null){

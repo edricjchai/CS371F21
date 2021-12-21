@@ -7,8 +7,6 @@
 	// concurrent hashmap/tree to implement the concurrent KV store
     package framework;
     import java.util.ArrayList;
-    import java.util.Iterator;
-    import java.util.NoSuchElementException;
 
     public class ConcurrentKVStore {
         private int num_partition;
@@ -17,12 +15,13 @@
 
         private class kv{
             private Object key;
-            private Object value;
+            private ArrayList<Object> value;
             private kv next;
 
             public kv(Object key, Object value){
                 this.key = key;
-                this.value = value;
+                this.value = new ArrayList<>();
+                this.value.add(value);
                 this.next = null;
             }
         }
@@ -34,7 +33,14 @@
         }
 
         public void insert(Object key){
-            pair.add(new kv(key, "1"));
+            if(pair == null)
+                pair.add(new kv(key, "1"));
+            else{
+                if(pair.contains(key)){
+                    kv temp = new kv(key, pair.get(pair.indexOf(key)).value.add("1"));
+                    pair.set(pair.indexOf(key),temp);
+                }
+            }
         }
 
         public int getPartitionNumber() {
